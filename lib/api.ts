@@ -4,7 +4,7 @@
 const API_URL =
   (typeof window === "undefined" && process.env.NEXT_PUBLIC_API_URL) ||
   process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:8001/api";
+  "http://localhost:8001";
 
 /* ---------- Types ---------- */
 
@@ -300,7 +300,7 @@ export interface SalesTrendsResponse {
 }
 
 export async function fetchSalesTrends(): Promise<SalesTrendsResponse> {
-  const res = await fetch(`${API_URL}/sales-trends/`, {
+  const res = await fetch(`${API_URL}/api/sales-trends/`, {
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`Failed to fetch sales trends: ${res.status}`);
@@ -328,7 +328,7 @@ export interface SectorsListResponse {
 }
 
 export async function fetchSectorsList(): Promise<SectorsListResponse> {
-  const res = await fetch(`${API_URL}/sectors`, { cache: "no-store" });
+  const res = await fetch(`${API_URL}/api/sectors`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch sectors: ${res.status}`);
   return res.json();
 }
@@ -389,7 +389,7 @@ export async function fetchPriceHistory(
   symbol: string,
   days = 90,
 ): Promise<PriceHistoryResponse> {
-  const url = `${API_URL}/prices/${encodeURIComponent(symbol)}?days=${days}`;
+  const url = `${API_URL}/api/prices/${encodeURIComponent(symbol)}?days=${days}`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch price history: ${res.status}`);
   return res.json();
@@ -420,7 +420,7 @@ export interface MonthlyChartResponse {
 export async function fetchMonthlyChart(
   symbol: string,
 ): Promise<MonthlyChartResponse> {
-  const url = `${API_URL}/prices/${encodeURIComponent(symbol)}/monthly-chart`;
+  const url = `${API_URL}/api/prices/${encodeURIComponent(symbol)}/monthly-chart`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch monthly chart: ${res.status}`);
   return res.json();
@@ -440,7 +440,7 @@ export interface QuarterlyHistoryResponse {
 export async function fetchQuarterlyHistory(
   symbol: string,
 ): Promise<QuarterlyHistoryResponse> {
-  const url = `${API_URL}/quarterly/${encodeURIComponent(symbol)}/history`;
+  const url = `${API_URL}/api/quarterly/${encodeURIComponent(symbol)}/history`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) return { symbol, points: [] };
   return res.json();
@@ -476,7 +476,7 @@ export interface EarningsResponse {
 }
 
 export async function fetchEarnings(symbol: string): Promise<EarningsResponse> {
-  const url = `${API_URL}/earnings/${encodeURIComponent(symbol)}`;
+  const url = `${API_URL}/api/earnings/${encodeURIComponent(symbol)}`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch earnings: ${res.status}`);
   return res.json();
@@ -523,7 +523,7 @@ export async function fetchMcapSeries(
   symbol: string,
   days = 90,
 ): Promise<McapSeriesResponse> {
-  const url = `${API_URL}/mcap-series/${encodeURIComponent(symbol)}?days=${days}`;
+  const url = `${API_URL}/api/mcap-series/${encodeURIComponent(symbol)}?days=${days}`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch mcap series: ${res.status}`);
   return res.json();
@@ -543,7 +543,7 @@ export interface McapSummary {
 export async function fetchMcapSummary(
   symbol: string,
 ): Promise<McapSummary | null> {
-  const url = `${API_URL}/mcap-series/${encodeURIComponent(symbol)}/summary`;
+  const url = `${API_URL}/api/mcap-series/${encodeURIComponent(symbol)}/summary`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) return null;
   const data = await res.json();
@@ -587,7 +587,7 @@ export async function fetchMonthlySales(
   symbol: string,
   months = 36,
 ): Promise<MonthlySalesResponse> {
-  const url = `${API_URL}/mcap-series/${encodeURIComponent(symbol)}/sales?months=${months}`;
+  const url = `${API_URL}/api/mcap-series/${encodeURIComponent(symbol)}/sales?months=${months}`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch monthly sales: ${res.status}`);
   return res.json();
