@@ -257,7 +257,7 @@ export default function StockDetailView({ stock }: { stock: StockDetail }) {
             sub={mcapUsd ? "بر مبنای نرخ ارز روز" : undefined}
           />
           <MetricCard
-            label="P/E آیندهنگر"
+            label="P/E آینده نگر"
             value={peRecent?.toFixed(2) ?? "—"}
             sub={peSub}
             tone={peTone}
@@ -292,7 +292,7 @@ export default function StockDetailView({ stock }: { stock: StockDetail }) {
         {fpe && (
           <section className="rounded-3xl border border-app bg-surface p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-sm font-bold text-fg">برآورد P/E آیندهنگر</h2>
+              <h2 className="text-sm font-bold text-fg">برآورد P/E آینده نگر</h2>
               <ConfidenceBadge
                 confidence={fpeConfidence}
                 score={fpeConfidenceScore}
@@ -302,7 +302,7 @@ export default function StockDetailView({ stock }: { stock: StockDetail }) {
             {fpeConfidence === "non_calculable" ? (
               <p className="text-[11px] leading-6 text-muted">
                 {fpe.disclaimer ??
-                  "صورت مالی فصلی برای این نماد در دسترس نیست — P/E آیندهنگر محاسبه نشد."}
+                  "صورت مالی فصلی برای این نماد در دسترس نیست — P/E آینده نگر محاسبه نشد."}
               </p>
             ) : (
               <>
@@ -398,7 +398,7 @@ export default function StockDetailView({ stock }: { stock: StockDetail }) {
                 <strong className="text-fg">{mcapLabel}</strong>{" "}
                 {peRecent != null && (
                   <>
-                    و P/E آیندهنگر آن{" "}
+                    و P/E آینده نگر آن{" "}
                     <strong className="text-fg">{peRecent.toFixed(2)}</strong>{" "}
                   </>
                 )}
