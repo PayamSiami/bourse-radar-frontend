@@ -80,7 +80,7 @@ export default function StockDetailView({ stock }: { stock: StockDetail }) {
   const [watched, toggleWatched] = useWatchlist(stock.symbol);
   const [mcapUsd, setMcapUsd] = useState<number | null>(null);
   const [sales, setSales] = useState<MonthlySalesResponse | null>(null);
-  const [loadingSales, setLoadingSales] = useState(false);
+  const [loadingSales, setLoadingSales] = useState(true);
   const [unit, setUnit] = useState<"rial" | "usd">("usd");
   const reqId = useRef(0);
 
@@ -128,10 +128,8 @@ export default function StockDetailView({ stock }: { stock: StockDetail }) {
         ? `P/E: ${peMethodFa}`
         : "بدون داده صورتهای مالی";
 
-  // Single effect, both requests, race-safe.
   useEffect(() => {
     const id = ++reqId.current;
-    setLoadingSales(true);
 
     Promise.allSettled([
       fetchMcapSummary(stock.symbol),
@@ -220,8 +218,8 @@ export default function StockDetailView({ stock }: { stock: StockDetail }) {
               aria-pressed={watched}
               onClick={toggleWatched}
               className={`shrink-0 rounded-lg border px-3 py-1.5 text-[11px] font-medium transition ${watched
-                  ? "border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-400"
-                  : "border-app bg-surface text-muted hover:border-brand-300 hover:text-fg dark:hover:border-brand-500/40"
+                ? "border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-400"
+                : "border-app bg-surface text-muted hover:border-brand-300 hover:text-fg dark:hover:border-brand-500/40"
                 }`}
             >
               {watched ? "★ در واچلیست" : "☆ افزودن به واچلیست"}
@@ -310,8 +308,8 @@ export default function StockDetailView({ stock }: { stock: StockDetail }) {
                 {pe12 != null && (
                   <div
                     className={`mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-[11px] ${Math.abs(peDivergence ?? 0) > 25
-                        ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
-                        : "border-app bg-surface-2 text-muted"
+                      ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
+                      : "border-app bg-surface-2 text-muted"
                       }`}
                   >
                     <span>
@@ -325,8 +323,8 @@ export default function StockDetailView({ stock }: { stock: StockDetail }) {
                     {peDivergence != null && (
                       <span
                         className={`font-semibold tabular-nums ${peDivergence < 0
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-red-600 dark:text-red-400"
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-600 dark:text-red-400"
                           }`}
                       >
                         {peDivergence >= 0 ? "+" : ""}
@@ -459,8 +457,8 @@ export default function StockDetailView({ stock }: { stock: StockDetail }) {
                       }
                     }}
                     className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-right text-xs transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 ${active
-                        ? "bg-brand-50 font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-400"
-                        : "text-muted hover:bg-surface-2 hover:text-fg"
+                      ? "bg-brand-50 font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-400"
+                      : "text-muted hover:bg-surface-2 hover:text-fg"
                       }`}
                   >
                     <span>{tab.label}</span>
@@ -677,8 +675,8 @@ function MetricCard({
   return (
     <div
       className={`rounded-2xl border bg-surface p-4 ${featured
-          ? "border-brand-200 dark:border-brand-500/30"
-          : "border-app"
+        ? "border-brand-200 dark:border-brand-500/30"
+        : "border-app"
         }`}
     >
       <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
@@ -771,11 +769,11 @@ function PriceFreshnessBadge({ stale }: { stale: boolean }) {
   return (
     <span
       className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${stale
-          ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400"
-          : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400"
+        ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400"
+        : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400"
         }`}
     >
-      {stale ? "قیمت قدیمی" : "قیمت بهروز"}
+      {stale ? "قیمت قدیمی" : "قیمت به روز"}
     </span>
   );
 }
@@ -807,8 +805,8 @@ function UnitToggle({
             aria-selected={active}
             onClick={() => onChange(o.id)}
             className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition ${active
-                ? "bg-surface text-fg shadow-sm"
-                : "text-muted hover:text-fg"
+              ? "bg-surface text-fg shadow-sm"
+              : "text-muted hover:text-fg"
               }`}
           >
             {o.label}
