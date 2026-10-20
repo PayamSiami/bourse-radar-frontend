@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+
+# Allow all crawlers
+User-agent: Googlebot
+Allow: /
+sitemap: https://https://sahamkav.ir/sitemap.xml
+
+# Allow news crawlers
+User-agent: Googlebot-News
+Allow: /
+
+# Allow image crawlers
+User-agent: Googlebot-Image
+Allow: /
+
+# Block directory listing
+Disallow: /_next/
+Disallow: /static/
+
+# Host for mobile
+Host: https://https://sahamkav.ir

@@ -1,0 +1,28 @@
+{
+  "name": "بورس رادار - تحلیل بنیادی بورس تهران",
+  "short_name": "بورس رادار",
+  "description": "سیستم پیشرفته ارزیابی جذابیت سهام بورس تهران بر اساس فروش ماهانه، صورت‌های مالی و نسبت P/E آینده‌نگر.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "business"],
+  "lang": "fa",
+  "dir": "rtl",
+  "prefer_related_applications": false
+}
