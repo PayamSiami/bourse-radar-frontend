@@ -86,12 +86,15 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     capable: true,
   },
+
   manifest: "/manifest.json",
-    icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon-16x16.png",
-    apple: "/apple-icon-180x180.png",
-    },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml", sizes: "any" },
+    ],
+    shortcut: "/icon.svg",
+  },
+  // 👆 END OF UPDATED ICONS BLOCK 👆
 };
 
 export const viewport: Viewport = {
