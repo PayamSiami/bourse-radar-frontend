@@ -87,6 +87,11 @@ export const metadata: Metadata = {
     capable: true,
   },
 
+  // Google Search Console verification
+  verification: {
+    google: "ByFptW9EhQo_p46i1zOotDXpT1yLMOHaRwHkx_i7uyo",
+  },
+
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -94,7 +99,6 @@ export const metadata: Metadata = {
     ],
     shortcut: "/icon.svg",
   },
-  // 👆 END OF UPDATED ICONS BLOCK 👆
 };
 
 export const viewport: Viewport = {
