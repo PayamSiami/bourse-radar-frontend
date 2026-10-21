@@ -26,33 +26,10 @@ export function Hero({
       </div>
 
       <div className="max-w-5xl mx-auto px-4 text-center relative z-10">
-        {/* Animated badge */}
-        <div
-          className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-brand-100 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 text-sm font-medium transition-all duration-700 ${
-            mounted ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
-          }`}
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-          </span>
-          <span>🚀 ربات تحلیل بنیادی بورس تهران</span>
-        </div>
-
-        {/* Main title with gradient */}
-        <h1
-          className={`text-4xl md:text-5xl lg:text-6xl font-extrabold mt-6 bg-gradient-to-r from-fg via-brand-600 to-fg bg-clip-text text-transparent transition-all duration-1000 ${
-            mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
-        >
-          بورس <span className="bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">رادار</span>
-        </h1>
-
         {/* Subtitle */}
         <p
-          className={`text-lg md:text-xl text-muted mt-6 leading-8 max-w-3xl mx-auto transition-all duration-1000 delay-100 ${
-            mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
+          className={`text-lg md:text-xl text-muted mt-6 leading-8 max-w-3xl mx-auto transition-all duration-1000 delay-100 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            }`}
         >
           ارزیابی جذابیت سهام بورس تهران بر اساس فروش ماهانه، حاشیه سود واقعی،
           و نسبت P/E آینده‌نگر.
@@ -61,9 +38,8 @@ export function Hero({
         {/* Stats cards */}
         {generatedAt && (
           <div
-            className={`mt-10 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-4xl mx-auto transition-all duration-1000 delay-200 ${
-              mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-            }`}
+            className={`mt-10 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-4xl mx-auto transition-all duration-1000 delay-200 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+              }`}
           >
             {/* Latest Update */}
             <div className="bg-surface/80 backdrop-blur-sm border border-app rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
