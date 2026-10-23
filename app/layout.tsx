@@ -5,18 +5,19 @@ import "./globals.css";
 import { TopBar } from "@/components/top-bar";
 import { Footer } from "@/components/footer";
 
+
 const vazirmatn = Vazirmatn({
   variable: "--font-vazirmatn",
   subsets: ["arabic", "latin"],
   display: "swap",
 });
 
-const baseUrl = "https://sahamkav.ir"; // Update with your actual domain
+const baseUrl = "https://sahamkav.ir";
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "بورس رادار — تحلیل بنیادی بورس تهران",
+    default: "بورس کاو— تحلیل بنیادی بورس تهران",
     template: "%s | بورس رادار",
   },
   description:
@@ -37,7 +38,7 @@ export const metadata: Metadata = {
     "تحلیل تکنیکال",
     "داده‌های بورس",
   ],
-  authors: [{ name: "بورش رادار تیم", url: baseUrl }],
+  authors: [{ name: "بورش کاوتیم", url: baseUrl }],
   creator: "بورش رادار",
   publisher: "بورش رادار",
   formatDetection: {
@@ -61,7 +62,7 @@ export const metadata: Metadata = {
     locale: "fa_IR",
     url: baseUrl,
     siteName: "بورس رادار",
-    title: "بورس رادار — تحلیل بنیادی بورس تهران",
+    title: "بورس کاو— تحلیل بنیادی بورس تهران",
     description:
       "سیستم پیشرفته ارزیابی جذابیت سهام بورس تهران بر اساس فروش ماهانه، صورت‌های مالی و نسبت P/E آینده‌نگر.",
     images: [
@@ -69,13 +70,13 @@ export const metadata: Metadata = {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "بورس رادار — تحلیل بنیادی بورس تهران",
+        alt: "بورس کاو— تحلیل بنیادی بورس تهران",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "بورس رادار — تحلیل بنیادی بورس تهران",
+    title: "بورس کاو— تحلیل بنیادی بورس تهران",
     description:
       "سیستم پیشرفته ارزیابی جذابیت سهام بورس تهران بر اساس فروش ماهانه، صورت‌های مالی و نسبت P/E آینده‌نگر.",
     creator: "@bours_radar",
@@ -134,7 +135,7 @@ const structuredData = {
   },
   "maintainer": {
     "@type": "Organization",
-    "name": "بورش رادار بازسازی",
+    "name": "بورش کاوبازسازی",
     "url": baseUrl,
   },
 };
@@ -163,6 +164,19 @@ export default function RootLayout({
           id="theme-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
+        />
+        <Script
+          id="ms-clarity"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+      (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+      })(window, document, "clarity", "script", "z22ikl4qu8");
+    `,
+          }}
         />
         <TopBar />
         <main className="flex-1">{children}</main>
