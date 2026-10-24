@@ -8,23 +8,6 @@ function faNum(n: number | string): string {
     return String(n).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]!);
 }
 
-function LockIcon() {
-    return (
-        <svg
-            className="w-3.5 h-3.5 text-muted"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </svg>
-    );
-}
-
 export default function SectorsPage() {
     const [sectors, setSectors] = useState<SectorItem[]>([]);
     const [meta, setMeta] = useState<{ total: number; totalStocks: number } | null>(null);
@@ -45,7 +28,7 @@ export default function SectorsPage() {
         <main className="flex-1 bg-app">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
                 {/* Top banner */}
-                <div className="rounded-2xl bg-gradient-to-l from-brand-50 to-teal-50 dark:from-brand-500/10 dark:to-teal-500/10 border border-brand-100 dark:border-brand-500/20 p-5 mb-6 flex items-start gap-4">
+                <div className="rounded-2xl bg-linear-to-l from-brand-50 to-teal-50 dark:from-brand-500/10 dark:to-teal-500/10 border border-brand-100 dark:border-brand-500/20 p-5 mb-6 flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-brand-600 flex items-center justify-center text-white shrink-0">
                         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M3 7h18M3 12h18M3 17h18" />

@@ -81,8 +81,6 @@ export function MarketCapTab({ symbol }: { symbol: string }) {
 
   const isUp = periodChange != null ? periodChange >= 0 : true;
 
-  console.log(data)
-
   return (
     <div className="rounded-2xl border border-app bg-surface overflow-hidden">
       {/* ── Header ───────────────────────────────────────── */}
