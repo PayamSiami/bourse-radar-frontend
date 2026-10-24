@@ -7,6 +7,7 @@ import { Footer } from "@/components/footer";
 import { AuthProvider } from "@/lib/auth";
 
 
+
 const vazirmatn = Vazirmatn({
   variable: "--font-vazirmatn",
   subsets: ["arabic", "latin"],
@@ -184,6 +185,9 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <Footer />
         </AuthProvider>
+        <TopBar />
+        <main className="flex-1">{children}</main>
+        <Footer />
       </body>
     </html>
   );
