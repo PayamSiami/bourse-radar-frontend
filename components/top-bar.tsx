@@ -1,10 +1,17 @@
 "use client";
 
-import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { ThemeToggle } from "./theme-toggle";
 import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+
+import { useAuth } from "@/lib/auth";
 
 const NAV_ITEMS = [
   { href: "/stocks", label: "سهام" },
@@ -15,165 +22,333 @@ const NAV_ITEMS = [
 export function TopBar() {
   const router = useRouter();
   const pathname = usePathname();
-  const [q, setQ] = useState("");
+
+  const [query, setQuery] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!q.trim()) return;
-    router.push(`/stocks?q=${encodeURIComponent(q.trim())}`);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const { user, isAuthenticated, logout } = useAuth();
+
+  const closeMenus = useCallback(() => {
     setMobileOpen(false);
-  }
-
-  // ⌘K / Ctrl+K focuses search
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        inputRef.current?.focus();
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    setUserMenuOpen(false);
   }, []);
 
+  useEffect(() => {
+    closeMenus();
+  }, [pathname, closeMenus]);
+
+  // Keyboard shortcuts + outside-click handling
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === "k"
+      ) {
+        event.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+
+      if (event.key === "Escape") {
+        closeMenus();
+        searchRef.current?.blur();
+      }
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
+        setUserMenuOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [closeMenus]);
+
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const value = query.trim();
+    if (!value) {
+      searchRef.current?.focus();
+      return;
+    }
+
+    closeMenus();
+    router.push(`/stocks?q=${encodeURIComponent(value)}`);
+  }
+
+  async function handleLogout() {
+    try {
+      await logout();
+      closeMenus();
+      router.push("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  }
+
+  const displayName = user?.displayName || "کاربر";
+  const avatarLetter = (user?.displayName || user?.email || "U")
+    .charAt(0)
+    .toUpperCase();
+
   return (
-    <header className="sticky top-0 z-50 bg-app/85 backdrop-blur-xl border-b border-app/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3 sm:gap-5">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
-          <div className="relative w-10 h-10 rounded-xl flex items-center justify-center">
+    <header className="sticky top-0 z-50 border-b border-app/80 bg-app/85 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
+        {/* ── Logo ── */}
+        <Link
+          href="/"
+          onClick={closeMenus}
+          aria-label="بورس رادار — صفحه اصلی"
+          className="group flex shrink-0 items-center gap-2.5 rounded-xl p-1 transition hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        >
+          <div className="relative h-9 w-9 sm:h-10 sm:w-10">
             <Image
-              alt="logo"
+              src="/logo.webp"
+              alt=""
               fill
-              src={"/logo.webp"}
-              sizes="10"
+              priority
+              sizes="40px"
+              className="object-contain transition-transform group-hover:scale-105"
             />
           </div>
+
           <div className="hidden sm:block">
-            <div className="text-[13px] font-bold text-fg leading-tight">
-              بورس <span className="text-brand-600 dark:text-brand-400">رادار</span>
+            <div className="text-[13px] font-bold leading-tight text-fg">
+              بورس{" "}
+              <span className="text-brand-600 dark:text-brand-400">
+                رادار
+              </span>
             </div>
-            <div className="text-[9px] text-muted leading-tight mt-0.5">
+            <div className="mt-0.5 text-[9px] leading-tight text-muted">
               تحلیل بنیادی بورس تهران
             </div>
           </div>
         </Link>
 
-        {/* Search */}
-        <form onSubmit={handleSubmit} className="flex-1 max-w-2xl mx-auto relative">
+        {/* ── Search ── */}
+        <form
+          onSubmit={handleSearch}
+          role="search"
+          className="relative mx-auto min-w-0 max-w-2xl flex-1"
+        >
+          <SearchIcon className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+
           <input
-            ref={inputRef}
-            type="text"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+            ref={searchRef}
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
             placeholder="جستجوی نماد یا نام شرکت..."
-            className="w-full h-10 px-4 pr-11 rounded-2xl bg-surface border border-app
-                       focus:border-brand-500/60 focus:outline-none
-                       focus:ring-1 focus:ring-brand-500/10 text-[13px] text-lg
-                       placeholder:text-muted/60 transition
-                       hover:border-app/80"
+            aria-label="جستجوی نماد یا نام شرکت"
+            className="h-10 w-full rounded-xl border border-app bg-surface pr-10 pl-24 text-sm text-fg transition placeholder:text-muted/60 hover:border-app/80 focus:border-brand-500/60 focus:bg-app focus:outline-none focus:ring-2 focus:ring-brand-500/15 sm:pl-28"
           />
 
-          {/* Search icon (left side, acts as submit) */}
-          <button
-            type="submit"
-            aria-label="جستجو"
-            className="absolute right-2 top-1/2 -translate-y-1/2 grid h-7 w-7 place-items-center rounded-lg text-muted hover:text-fg hover:bg-surface-2 transition"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-          </button>
-
-          {/* Clear button when text present */}
-          {q && (
+          {/* Clear button */}
+          {query && (
             <button
               type="button"
               onClick={() => {
-                setQ("");
-                inputRef.current?.focus();
+                setQuery("");
+                searchRef.current?.focus();
               }}
-              aria-label="پاک کردن"
-              className="absolute left-2 top-1/2 -translate-y-1/2 grid h-6 w-6 place-items-center rounded-md text-muted hover:text-fg hover:bg-surface-2 transition"
+              aria-label="پاک کردن جستجو"
+              className="absolute left-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-muted transition hover:bg-surface-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
+              <CloseIcon className="h-3.5 w-3.5" />
             </button>
           )}
 
-          {/* Keyboard hint */}
-          {!q && (
-            <kbd className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 items-center gap-0.5 px-1.5 py-0.5 rounded-md border border-app bg-surface-2 text-[9px] font-medium text-muted select-none">
-              <span className="text-[11px] leading-none">⌘</span>
-              <span>K</span>
+          {/* Shortcut hint OR submit */}
+          {!query ? (
+            <kbd className="pointer-events-none absolute left-3 top-1/2 hidden -translate-y-1/2 select-none items-center gap-0.5 rounded-md border border-app bg-surface-2 px-1.5 py-0.5 text-[9px] font-medium text-muted md:flex">
+              <span className="text-[11px]">⌘</span>K
             </kbd>
+          ) : (
+            <button
+              type="submit"
+              aria-label="جستجو"
+              className="absolute left-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg bg-brand-500 text-white transition hover:bg-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            >
+              <SearchIcon className="h-3.5 w-3.5" />
+            </button>
           )}
         </form>
 
-        {/* Desktop nav */}
-        <nav className="hidden lg:flex items-center gap-0.5">
+        {/* ── Desktop navigation ── */}
+        <nav
+          aria-label="ناوبری اصلی"
+          className="hidden shrink-0 items-center gap-0.5 lg:flex"
+        >
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.href}
               href={item.href}
-              active={pathname.startsWith(item.href)}
+              active={
+                pathname === item.href ||
+                pathname.startsWith(`${item.href}/`)
+              }
             >
               {item.label}
             </NavLink>
           ))}
         </nav>
 
-        {/* Right cluster */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <ThemeToggle />
+        {/* ── Actions ── */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {isAuthenticated ? (
+            <div ref={userMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen((open) => !open)}
+                aria-label="منوی کاربر"
+                aria-expanded={userMenuOpen}
+                aria-haspopup="menu"
+                className="flex items-center gap-2 rounded-xl border border-app bg-surface px-1.5 py-1.5 transition hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:px-2.5"
+              >
+                {user?.avatarUrl ? (
+                  <Image
+                    src={user.avatarUrl}
+                    alt=""
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-brand-400 to-emerald-400 text-sm font-semibold text-white"
+                  >
+                    {avatarLetter}
+                  </div>
+                )}
+
+                <span className="hidden max-w-28 truncate text-sm font-medium text-fg sm:block">
+                  {displayName}
+                </span>
+
+                <ChevronIcon
+                  className={`h-4 w-4 text-muted transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""
+                    }`}
+                />
+              </button>
+
+              {userMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute left-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-xl border border-app bg-surface py-1 shadow-xl ring-1 ring-black/5 dark:ring-white/5"
+                >
+                  <div className="border-b border-app px-4 py-2.5">
+                    <div className="truncate text-sm font-semibold text-fg">
+                      {displayName}
+                    </div>
+                    {user?.email && (
+                      <div className="mt-0.5 truncate text-xs text-muted">
+                        {user.email}
+                      </div>
+                    )}
+                  </div>
+
+                  <Link
+                    href="/profile"
+                    role="menuitem"
+                    onClick={closeMenus}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-fg transition hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none"
+                  >
+                    <UserIcon className="h-4 w-4 text-muted" />
+                    پروفایل من
+                  </Link>
+                  <Link
+                    href="/tickets"
+                    role="menuitem"
+                    onClick={closeMenus}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-fg transition hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none"
+                  >
+                    <TicketIcon className="h-4 w-4 text-muted" />
+                    تیکت‌های من
+                  </Link>
+
+                  <div className="my-1 border-t border-app" />
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-right text-sm text-red-600 transition hover:bg-red-500/10 focus-visible:bg-red-500/10 focus-visible:outline-none dark:text-red-400"
+                  >
+                    <LogoutIcon className="h-4 w-4" />
+                    خروج از حساب
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              onClick={closeMenus}
+              className="whitespace-nowrap rounded-xl bg-brand-600 px-3.5 py-2 text-xs font-semibold transition hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 sm:px-4 sm:text-sm"
+            >
+              ورود / ثبت‌نام
+            </Link>
+          )}
 
           {/* Mobile menu button */}
           <button
             type="button"
-            onClick={() => setMobileOpen((v) => !v)}
-            aria-label="منو"
+            onClick={() => setMobileOpen((open) => !open)}
+            aria-label={mobileOpen ? "بستن منو" : "باز کردن منو"}
             aria-expanded={mobileOpen}
-            className="lg:hidden grid h-9 w-9 place-items-center rounded-xl border border-app bg-surface text-muted hover:text-fg hover:bg-surface-2 transition"
+            aria-controls="mobile-navigation"
+            className="grid h-9 w-9 place-items-center rounded-xl border border-app bg-surface text-muted transition hover:bg-surface-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 lg:hidden"
           >
             {mobileOpen ? (
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
+              <CloseIcon className="h-4 w-4" />
             ) : (
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M3 6h18M3 12h18M3 18h18" />
-              </svg>
+              <MenuIcon className="h-4 w-4" />
             )}
           </button>
         </div>
       </div>
 
-      {/* Mobile nav drawer */}
+      {/* ── Mobile navigation ── */}
       {mobileOpen && (
-        <nav className="lg:hidden border-t border-app bg-app/95 backdrop-blur-xl animate-in slide-in-from-top-2 fade-in duration-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex flex-col">
+        <nav
+          id="mobile-navigation"
+          aria-label="ناوبری موبایل"
+          className="border-t border-app bg-app/95 px-4 py-2 backdrop-blur-xl lg:hidden sm:px-6"
+        >
+          <div className="mx-auto flex max-w-7xl flex-col gap-0.5">
             {NAV_ITEMS.map((item) => {
-              const active = pathname.startsWith(item.href);
+              const active =
+                pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
+
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={`px-3 py-3 rounded-xl text-sm transition flex items-center justify-between ${active
-                    ? "text-brand-600 dark:text-brand-400 font-semibold bg-brand-50 dark:bg-brand-500/10"
-                    : "text-muted hover:text-fg hover:bg-surface-2"
+                  onClick={closeMenus}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition ${active
+                      ? "bg-brand-500/10 font-semibold text-brand-600 dark:text-brand-400"
+                      : "text-muted hover:bg-surface-2 hover:text-fg"
                     }`}
                 >
                   <span>{item.label}</span>
-                  {active && (
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                      <path d="M15 18l-6-6 6-6" />
-                    </svg>
-                  )}
+                  {active && <span aria-hidden="true">←</span>}
                 </Link>
               );
             })}
@@ -196,15 +371,146 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`relative px-3 py-2 rounded-lg text-xs font-medium transition ${active
-        ? "text-fg"
-        : "text-muted hover:text-fg hover:bg-surface-2"
+      aria-current={active ? "page" : undefined}
+      className={`relative rounded-lg px-3 py-2 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${active
+          ? "text-fg"
+          : "text-muted hover:bg-surface-2 hover:text-fg"
         }`}
     >
       {children}
       {active && (
-        <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-brand-500" />
+        <span
+          aria-hidden="true"
+          className="absolute bottom-0.5 left-1/2 h-0.5 w-4 -translate-x-1/2 rounded-full bg-brand-500"
+        />
       )}
     </Link>
   );
 }
+
+/* ── Icons ── */
+
+function SearchIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  );
+}
+
+function CloseIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  );
+}
+
+function MenuIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    >
+      <path d="M3 6h18M3 12h18M3 18h18" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+function UserIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </svg>
+  );
+}
+
+function TicketIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 9a3 3 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a3 3 0 0 0 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z" />
+      <path d="M13 5v2M13 17v2M13 11v2" />
+    </svg>
+  );
+}
+
+function LogoutIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <path d="m16 17 5-5-5-5" />
+      <path d="M21 12H9" />
+    </svg>
+  );
+}
+
+export default TopBar;

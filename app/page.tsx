@@ -1,406 +1,601 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
 import {
   fetchRankings,
   fetchSectors,
-  RankingItem,
-  SectorSummary,
+  type RankingItem,
+  type SectorSummary,
 } from "@/lib/api";
+
 import { num } from "@/lib/format";
-import SearchBar, { SortKey } from "@/components/SearchBar";
 import StockCard from "@/components/StockCard";
-import StockSkeleton from "@/components/StockSkeleton";
-import SectorPanel from "@/components/SectorPanel";
-import { Hero } from "@/components/hero";
 import { SalesTrends } from "@/components/sales-trends";
+import { Hero } from "@/components/hero";
 
-// ──────────────────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────────────────
+type SortKey = "rank" | "score" | "pe" | "change" | "volume";
 
-function finite(v: number | null | undefined): number | null {
-  if (v == null) return null;
-  return Number.isFinite(v) ? v : null;
+type Meta = {
+  generatedAt?: string;
+  count?: number;
+};
+
+const PAGE_SIZE = 18;
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "rank", label: "رتبه جذابیت" },
+  { value: "score", label: "بیشترین امتیاز" },
+  { value: "pe", label: "کمترین P/E آینده" },
+  { value: "change", label: "بیشترین تغییر روزانه" },
+  { value: "volume", label: "بیشترین حجم معاملات" },
+];
+
+function toNumber(value: unknown): number | null {
+  return num(value);
 }
 
-// ──────────────────────────────────────────────────────────
-// Page
-// ──────────────────────────────────────────────────────────
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat("fa-IR").format(value);
+}
 
 export default function Home() {
   const [items, setItems] = useState<RankingItem[]>([]);
   const [sectors, setSectors] = useState<SectorSummary[]>([]);
-  const [sectorsLoaded, setSectorsLoaded] = useState(false);
-  const [meta, setMeta] = useState<{
-    generatedAt: string;
-    count: number;
-  } | null>(null);
+  const [meta, setMeta] = useState<Meta | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sort, setSort] = useState<SortKey>("rank");
+
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [activeSector, setActiveSector] = useState<string | null>(null);
-  const reqId = useRef(0);
+  const [activeSector, setActiveSector] = useState("");
+  const [sort, setSort] = useState<SortKey>("rank");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  const requestId = useRef(0);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async () => {
-    const id = ++reqId.current;
+    const id = ++requestId.current;
+
     setLoading(true);
     setError(null);
 
     try {
-      const rankings = await fetchRankings(50);
-      const sectorsRes = await fetchSectors().catch(
-        (): { data: SectorSummary[]; generatedAt: string } => ({
-          data: [],
-          generatedAt: "",
-        }),
-      );
+      const [rankingResult, sectorResult] = await Promise.all([
+        fetchRankings(50),
+        fetchSectors().catch(() => [] as SectorSummary[]),
+      ]);
 
-      if (id !== reqId.current) return;
-      setItems(rankings.data);
-      setSectors(sectorsRes.data);
-      setSectorsLoaded(true);
+      if (id !== requestId.current) return;
+
+      // اگر API پروژه خروجی متفاوتی دارد، این دو خط را
+      // مطابق ساختار واقعی پاسخ API تنظیم کن.
+      const rankingData = rankingResult as unknown as {
+        items?: RankingItem[];
+        data?: RankingItem[];
+        generatedAt?: string;
+        count?: number;
+      } & RankingItem[];
+
+      const rankingItems = Array.isArray(rankingResult)
+        ? rankingResult
+        : rankingData.items ?? rankingData.data ?? [];
+
+      setItems(rankingItems);
+      setSectors(sectorResult);
       setMeta({
-        generatedAt: rankings.meta.generatedAt,
-        count: rankings.meta.count,
+        generatedAt: rankingData.generatedAt,
+        count: rankingData.count ?? rankingItems.length,
       });
-    } catch (e: unknown) {
-      if (id !== reqId.current) return;
-      setError(e instanceof Error ? e.message : String(e));
+    } catch (err) {
+      if (id !== requestId.current) return;
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "دریافت اطلاعات با خطا مواجه شد.",
+      );
     } finally {
-      if (id === reqId.current) setLoading(false);
+      if (id === requestId.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     void load();
+
+    return () => {
+      requestId.current += 1;
+    };
   }, [load]);
 
-  // SearchBar already debounces its own onSearch to 200ms, so no local
-  // timer is needed here — just mirror the latest value.
   useEffect(() => {
-    setDebouncedQuery(query);
+    const timer = window.setTimeout(() => {
+      setDebouncedQuery(query.trim());
+    }, 250);
+
+    return () => window.clearTimeout(timer);
   }, [query]);
 
-  // ── Derived ─────────────────────────────────────────
-  const filtered = useMemo(() => {
-    let list = items;
-    const q = debouncedQuery.trim();
-    if (q) {
-      list = list.filter(
-        (s) => s.symbol.includes(q) || s.name.includes(q),
-      );
-    }
-    if (activeSector) list = list.filter((s) => s.sector === activeSector);
-    return list;
-  }, [items, debouncedQuery, activeSector]);
+  const filteredItems = useMemo(() => {
+    const normalizedQuery = debouncedQuery.toLocaleLowerCase("fa-IR");
 
-  const sorted = useMemo(() => {
-    const copy = [...filtered];
-    const by = (
-      fn: (s: RankingItem) => number | null | undefined,
-      dir: 1 | -1 = 1,
-    ) => (a: RankingItem, b: RankingItem) => {
-      const av = finite(fn(a));
-      const bv = finite(fn(b));
-      if (av === null && bv === null) return 0;
-      if (av === null) return 1;
-      if (bv === null) return -1;
-      return (av - bv) * dir;
-    };
-    switch (sort) {
-      case "score":
-        return copy.sort(by((s) => num(s.attractivenessScore), -1));
-      case "pe":
-        return copy.sort(by((s) => num(s.forwardPe), 1));
-      case "change":
-        return copy.sort(by((s) => num(s.priceChangePercent), -1));
-      case "volume":
-        return copy.sort(by((s) => num(s.dailyVolume), -1));
-      default:
-        return copy.sort(by((s) => num(s.rank), 1));
-    }
-  }, [filtered, sort]);
+    const result = items.filter((stock) => {
+      const matchesQuery =
+        !normalizedQuery ||
+        stock.symbol.toLocaleLowerCase("fa-IR").includes(normalizedQuery) ||
+        stock.name.toLocaleLowerCase("fa-IR").includes(normalizedQuery);
+
+      const matchesSector =
+        !activeSector || stock.sector === activeSector;
+
+      return matchesQuery && matchesSector;
+    });
+
+    result.sort((a, b) => {
+      const aRank = toNumber(a.rank) ?? Number.MAX_SAFE_INTEGER;
+      const bRank = toNumber(b.rank) ?? Number.MAX_SAFE_INTEGER;
+
+      const aScore = toNumber(a.attractivenessScore) ?? -Infinity;
+      const bScore = toNumber(b.attractivenessScore) ?? -Infinity;
+
+      const aPe = toNumber(a.forwardPe);
+      const bPe = toNumber(b.forwardPe);
+
+      const aChange = toNumber(a.priceChangePercent) ?? -Infinity;
+      const bChange = toNumber(b.priceChangePercent) ?? -Infinity;
+
+      const aVolume = toNumber(a.dailyVolume) ?? -Infinity;
+      const bVolume = toNumber(b.dailyVolume) ?? -Infinity;
+
+      switch (sort) {
+        case "score":
+          return bScore - aScore;
+
+        case "pe":
+          if (aPe === null) return 1;
+          if (bPe === null) return -1;
+          return aPe - bPe;
+
+        case "change":
+          return bChange - aChange;
+
+        case "volume":
+          return bVolume - aVolume;
+
+        case "rank":
+        default:
+          return aRank - bRank;
+      }
+    });
+
+    return result;
+  }, [items, debouncedQuery, activeSector, sort]);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [filteredItems]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+
+    if (!target || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((current) =>
+            Math.min(current + PAGE_SIZE, filteredItems.length),
+          );
+        }
+      },
+      { rootMargin: "500px" },
+    );
+
+    observer.observe(target);
+
+    return () => observer.disconnect();
+  }, [loading, filteredItems.length, visibleCount]);
+
+  const visibleItems = useMemo(
+    () => filteredItems.slice(0, visibleCount),
+    [filteredItems, visibleCount],
+  );
 
   const stats = useMemo(() => {
-    if (filtered.length === 0) return null;
-    let sum = 0;
+    let scoreTotal = 0;
+    let scoreCount = 0;
     let gainers = 0;
     let losers = 0;
-    for (const s of filtered) {
-      sum += finite(num(s.attractivenessScore)) ?? 0;
-      const ch = finite(num(s.priceChangePercent)) ?? 0;
-      if (ch > 0) gainers++;
-      else if (ch < 0) losers++;
+
+    for (const stock of filteredItems) {
+      const score = toNumber(stock.attractivenessScore);
+      const change = toNumber(stock.priceChangePercent);
+
+      if (score !== null) {
+        scoreTotal += score;
+        scoreCount += 1;
+      }
+
+      if (change !== null && change > 0) gainers += 1;
+      if (change !== null && change < 0) losers += 1;
     }
+
     return {
-      avg: sum / filtered.length,
+      avgScore: scoreCount ? scoreTotal / scoreCount : 0,
       gainers,
       losers,
-      total: filtered.length,
+      total: filteredItems.length,
     };
-  }, [filtered]);
+  }, [filteredItems]);
 
   const hasFilters = Boolean(query.trim() || activeSector);
 
   const clearFilters = useCallback(() => {
     setQuery("");
     setDebouncedQuery("");
-    setActiveSector(null);
+    setActiveSector("");
+    setSort("rank");
   }, []);
 
   return (
-    <main className="flex-1">
-      {/* ── 1. Hero with inline stats ─────────────────── */}
+    <main
+      dir="rtl"
+      className="min-h-screen bg-app text-fg"
+    >
       <Hero
-        generatedAt={loading ? undefined : meta?.generatedAt}
         total={loading ? undefined : (meta?.count ?? items.length)}
-        stats={
-          loading || !stats
-            ? null
-            : {
-                avgScore: Math.round(stats.avg * 100),
-                gainers: stats.gainers,
-                losers: stats.losers,
-              }
-        }
+        stats={{
+          avgScore: Math.round(stats.avgScore * 100),
+          gainers: stats.gainers,
+          losers: stats.losers,
+        }}
+        generatedAt={meta?.generatedAt}
       />
 
-      {/* ── 2. Controls ───────────────────────────────── */}
-      <section
-        aria-label="جستجو و فیلتر"
-        className="mx-auto mt-6 max-w-7xl px-4 sm:px-6"
-      >
-        <SearchBar
-          onSearch={setQuery}
-          sort={sort}
-          onSort={setSort}
-          loading={loading}
-        />
-        {sectorsLoaded && sectors.length > 0 && (
-          <div className="mt-3">
-            <SectorPanel
-              sectors={sectors}
-              selected={activeSector}
-              onSelect={setActiveSector}
-            />
+      <div className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
+        {/* Search and filters */}
+        <section
+          aria-label="جستجو و فیلتر نمادها"
+          className="relative z-10 -mt-6 rounded-3xl border border-app bg-surface p-4 shadow-lg sm:-mt-8 sm:p-6"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+            <div className="min-w-0 flex-1">
+              <label
+                htmlFor="stock-search"
+                className="mb-2 block text-sm font-semibold"
+              >
+                جستجوی نماد یا شرکت
+              </label>
+
+              <div className="relative">
+                <svg
+                  aria-hidden="true"
+                  className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m16 16 4 4" />
+                </svg>
+
+                <input
+                  id="stock-search"
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="مثلاً زشگزا یا نام شرکت..."
+                  className="h-12 w-full rounded-2xl border border-app bg-surface-2 pr-12 pl-4 text-sm outline-none transition placeholder:text-muted/70 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"
+                />
+
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    aria-label="پاک کردن جستجو"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted transition hover:bg-surface hover:text-fg"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      className="h-4 w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="m18 6-12 12M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="w-full lg:w-64">
+              <label
+                htmlFor="stock-sort"
+                className="mb-2 block text-sm font-semibold"
+              >
+                مرتب‌سازی بر اساس
+              </label>
+
+              <select
+                id="stock-sort"
+                value={sort}
+                onChange={(event) =>
+                  setSort(event.target.value as SortKey)
+                }
+                className="h-12 w-full rounded-2xl border border-app bg-surface-2 px-4 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Sector filters */}
+          {sectors.length > 0 && (
+            <div className="mt-5 border-t border-app pt-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold">فیلتر صنعت</h2>
+
+                {activeSector && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSector("")}
+                    className="text-xs font-medium text-brand-600 transition hover:opacity-75 dark:text-brand-400"
+                  >
+                    حذف فیلتر صنعت
+                  </button>
+                )}
+              </div>
+
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveSector("")}
+                  aria-pressed={!activeSector}
+                  className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition ${!activeSector
+                    ? "border-brand-600 bg-brand-600 text-white shadow-sm"
+                    : "border-app bg-surface-2 text-muted hover:border-brand-500/50 hover:text-fg"
+                    }`}
+                >
+                  همه صنایع
+                  <span className="mr-2 text-xs opacity-80">
+                    {formatNumber(items.length)}
+                  </span>
+                </button>
+
+                {sectors.map((sector) => {
+                  const sectorName = String(
+                    (sector as SectorSummary & { sector?: string }).sector ??
+                    (sector as SectorSummary & { name?: string }).name ??
+                    "",
+                  );
+
+                  if (!sectorName) return null;
+
+                  const isActive = activeSector === sectorName;
+
+                  return (
+                    <button
+                      key={sectorName}
+                      type="button"
+                      onClick={() =>
+                        setActiveSector(isActive ? "" : sectorName)
+                      }
+                      aria-pressed={isActive}
+                      className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition ${isActive
+                        ? "border-brand-600 bg-brand-600 text-white shadow-sm"
+                        : "border-app bg-surface-2 text-muted hover:border-brand-500/50 hover:text-fg"
+                        }`}
+                    >
+                      {sectorName}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Results header */}
+        <section className="mb-5 mt-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-2 text-xs font-semibold tracking-wide text-brand-600 dark:text-brand-400">
+              تحلیل بازار سرمایه
+            </p>
+
+            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+              رتبه‌بندی نمادها
+            </h1>
+
+            <p className="mt-2 text-sm leading-6 text-muted">
+              نمادها را بر اساس امتیاز جذابیت و شاخص‌های مالی بررسی کن.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-app bg-surface px-4 py-3">
+              <p className="text-xs text-muted">تعداد نتایج</p>
+              <p
+                className="mt-1 text-lg font-bold tabular-nums"
+                aria-live="polite"
+              >
+                {loading ? "…" : formatNumber(filteredItems.length)}
+              </p>
+            </div>
+
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="rounded-2xl border border-app bg-surface px-4 py-3 text-sm font-semibold transition hover:border-brand-500/50 hover:text-brand-600 dark:hover:text-brand-400"
+              >
+                پاک‌کردن فیلترها
+              </button>
+            )}
+          </div>
+        </section>
+
+        {/* Error state */}
+        {error && (
+          <div
+            role="alert"
+            className="mb-6 flex flex-col gap-4 rounded-2xl border border-red-500/20 bg-red-500/5 p-5 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-600 dark:text-red-400">
+                <svg
+                  aria-hidden="true"
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v6m0 4h.01" />
+                </svg>
+              </span>
+
+              <div>
+                <h2 className="font-bold">دریافت اطلاعات ناموفق بود</h2>
+                <p className="mt-1 wrap-break-word text-sm leading-6 text-muted">
+                  {error}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void load()}
+              disabled={loading}
+              className="shrink-0 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? "در حال دریافت..." : "تلاش مجدد"}
+            </button>
           </div>
         )}
-      </section>
 
-      {/* ── 3. Stock grid (primary content) ───────────── */}
-      <section
-        aria-label="فهرست سهام"
-        aria-live="polite"
-        aria-busy={loading}
-        className="mx-auto mt-6 max-w-7xl px-4 pb-16 sm:px-6"
-      >
-        {!error && (
-          <HomeGrid items={sorted} loading={loading} />
+        {/* Loading state */}
+        {loading && items.length === 0 && (
+          <div
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            aria-label="در حال بارگذاری نمادها"
+          >
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="min-h-64 animate-pulse rounded-2xl border border-app bg-surface p-5"
+              >
+                <div className="mb-5 h-5 w-24 rounded-lg bg-surface-2" />
+                <div className="mb-3 h-4 w-3/4 rounded-lg bg-surface-2" />
+                <div className="mb-8 h-3 w-1/2 rounded-lg bg-surface-2" />
+                <div className="mb-4 h-3 w-full rounded-lg bg-surface-2" />
+                <div className="h-10 rounded-xl bg-surface-2" />
+              </div>
+            ))}
+          </div>
         )}
 
-        {!loading && !error && sorted.length === 0 && (
-          <StatePanel
-            tone="empty"
-            title={
-              debouncedQuery
-                ? `نمادی با «${debouncedQuery}» یافت نشد`
-                : activeSector
-                  ? "نمادی در این صنعت یافت نشد"
-                  : "هنوز داده‌ای رتبه‌بندی نشده"
-            }
-            body={
-              debouncedQuery || activeSector
-                ? "فیلترها را تغییر دهید یا پاک کنید."
-                : "رتبه‌بندی هر شب به‌روزرسانی می‌شود."
-            }
-            action={
-              hasFilters
-                ? { label: "پاک کردن فیلترها", onClick: clearFilters }
-                : undefined
-            }
-          />
-        )}
+        {/* Stock cards */}
+        {!loading || items.length > 0 ? (
+          filteredItems.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {visibleItems.map((stock) => (
+                  <StockCard
+                    key={stock.symbol}
+                    stock={stock}
+                  />
+                ))}
+              </div>
 
-        {error && (
-          <StatePanel
-            tone="error"
-            title="بارگذاری داده‌ها ناموفق بود"
-            body={error}
-            action={{
-              label: loading ? "در حال تلاش…" : "تلاش دوباره",
-              onClick: load,
-              disabled: loading,
-            }}
-          />
-        )}
-      </section>
+              <div
+                ref={loadMoreRef}
+                className="flex min-h-20 items-center justify-center py-6"
+              >
+                {visibleCount < filteredItems.length && (
+                  <div className="flex items-center gap-3 text-sm text-muted">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-500/30 border-t-brand-600" />
+                    در حال بارگذاری نمادهای بیشتر...
+                  </div>
+                )}
 
-      {/* ── 4. Sales trends (secondary) ───────────────── */}
-      <section
-        aria-label="روند فروش"
-        className="mx-auto max-w-7xl border-t border-app px-4 pt-10 pb-16 sm:px-6"
-      >
-        <h2 className="mb-4 text-sm font-bold text-fg">روند فروش</h2>
-        <SalesTrends />
-      </section>
-    </main>
-  );
-}
+                {visibleCount >= filteredItems.length &&
+                  filteredItems.length > PAGE_SIZE && (
+                    <p className="text-xs text-muted">
+                      همه {formatNumber(filteredItems.length)} نماد نمایش داده شدند.
+                    </p>
+                  )}
+              </div>
+            </>
+          ) : (
+            !loading && (
+              <div className="rounded-3xl border border-dashed border-app bg-surface px-5 py-16 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-2 text-muted">
+                  <svg
+                    aria-hidden="true"
+                    className="h-7 w-7"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                  >
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m16 16 4 4M8 11h6" />
+                  </svg>
+                </div>
 
-// ── Windowed homepage list (same idea as /stocks, smaller step) ──
-function HomeGrid({
-  items,
-  loading,
-}: {
-  items: RankingItem[];
-  loading: boolean;
-}) {
-  const STEP = 18;
-  const [visible, setVisible] = useState(STEP);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+                <h2 className="mt-5 text-lg font-bold">
+                  نمادی پیدا نشد
+                </h2>
 
-  useEffect(() => {
-    setVisible(STEP);
-  }, [items]);
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">
+                  عبارت جستجو یا صنعت انتخاب‌شده را تغییر بده تا نتایج بیشتری ببینی.
+                </p>
 
-  useEffect(() => {
-    if (loading) return;
-    const el = sentinelRef.current;
-    if (!el) return;
-    if (visible >= items.length) return;
+                {hasFilters && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="mt-6 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-700"
+                  >
+                    نمایش همه نمادها
+                  </button>
+                )}
+              </div>
+            )
+          )
+        ) : null}
 
-    if (typeof IntersectionObserver === "undefined") {
-      setVisible(items.length);
-      return;
-    }
+        {/* Sales trends */}
+        <section className="mt-12 border-t border-app pt-10">
+          <SalesTrends />
+        </section>
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        const first = entries[0];
-        if (first?.isIntersecting) {
-          setVisible((n) => Math.min(n + STEP, items.length));
-        }
-      },
-      { rootMargin: "600px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [items.length, loading, visible]);
-
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <StockSkeleton key={i} />
-        ))}
-      </div>
-    );
-  }
-
-  const slice = items.slice(0, visible);
-  return (
-    <>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {slice.map((s) => (
-          <StockCard key={s.symbol} stock={s} />
-        ))}
-      </div>
-      {visible < items.length && (
-        <div
-          ref={sentinelRef}
-          className="mt-6 flex justify-center"
-          aria-hidden="true"
-        >
-          <span className="text-xs text-muted tabular">
-            {visible} / {items.length}
-          </span>
-        </div>
-      )}
-    </>
-  );
-}
-
-// ──────────────────────────────────────────────────────────
-// State panel (shared shell for empty + error)
-// ──────────────────────────────────────────────────────────
-
-function StatePanel({
-  tone,
-  title,
-  body,
-  action,
-}: {
-  tone: "empty" | "error";
-  title: string;
-  body?: string;
-  action?: { label: string; onClick: () => void; disabled?: boolean };
-}) {
-  const palette =
-    tone === "error"
-      ? {
-          wrap:
-            "border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10",
-          iconWrap:
-            "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400",
-          title: "text-red-800 dark:text-red-300",
-          body: "text-red-700 dark:text-red-300/80",
-          btn: "bg-red-600 hover:bg-red-700 text-white disabled:opacity-50",
-          icon: "M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z",
-        }
-      : {
-          wrap: "border-app bg-surface-2/40 border-dashed",
-          iconWrap: "bg-surface text-muted",
-          title: "text-fg",
-          body: "text-muted",
-          btn: "bg-surface border border-app hover:border-brand-300 dark:hover:border-brand-500/40 text-fg",
-          icon: "M3 3v18h18M7 15l4-4 3 3 5-6",
-        };
-
-  return (
-    <div
-      role={tone === "error" ? "status" : undefined}
-      aria-live={tone === "error" ? "polite" : undefined}
-      className={`flex flex-col items-center gap-3 rounded-2xl border px-6 py-12 text-center ${palette.wrap}`}
-    >
-      <div
-        className={`flex h-10 w-10 items-center justify-center rounded-xl ${palette.iconWrap}`}
-      >
-        <svg
-          className="h-5 w-5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d={palette.icon} />
-        </svg>
-      </div>
-
-      <div className="space-y-1">
-        <p className={`text-sm font-bold ${palette.title}`}>{title}</p>
-        {body && (
-          <p className={`mx-auto max-w-md text-xs leading-6 ${palette.body}`}>
-            {body}
+        {/* Data timestamp */}
+        {meta?.generatedAt && (
+          <p className="mt-8 text-center text-xs text-muted">
+            آخرین به‌روزرسانی:{" "}
+            {new Date(meta.generatedAt).toLocaleString("fa-IR")}
           </p>
         )}
       </div>
-
-      {action && (
-        <button
-          type="button"
-          onClick={action.onClick}
-          disabled={action.disabled}
-          className={`rounded-xl px-4 py-1.5 text-xs font-semibold transition ${palette.btn}`}
-        >
-          {action.label}
-        </button>
-      )}
-    </div>
+    </main>
   );
 }

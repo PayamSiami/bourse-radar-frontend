@@ -1,75 +1,135 @@
 import Link from "next/link";
-import { RankingItem } from "@/lib/api";
-import { faPrice, faCompact, faPercent, num, scoreTier } from "@/lib/format";
+import type { RankingItem } from "@/lib/api";
+import {
+  faPrice,
+  faCompact,
+  faPercent,
+  num,
+  scoreTier,
+} from "@/lib/format";
 
 const tier = {
   excellent: {
-    bar: "bg-gradient-to-r from-brand-600 to-brand-400",
+    bar: "from-brand-500 to-brand-400",
     text: "text-brand-600 dark:text-brand-400",
-    ring: "ring-brand-500/30",
+    badge:
+      "bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400",
     label: "عالی",
-    glow: "shadow-brand-500/20",
   },
   good: {
-    bar: "bg-gradient-to-r from-teal-600 to-teal-400",
+    bar: "from-teal-600 to-emerald-400",
     text: "text-teal-600 dark:text-teal-400",
-    ring: "ring-teal-500/20",
+    badge:
+      "bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-400",
     label: "خوب",
-    glow: "shadow-teal-500/20",
   },
   fair: {
-    bar: "bg-gradient-to-r from-amber-600 to-amber-400",
+    bar: "from-amber-600 to-yellow-400",
     text: "text-amber-600 dark:text-amber-400",
-    ring: "ring-amber-500/20",
+    badge:
+      "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
     label: "متوسط",
-    glow: "shadow-amber-500/20",
   },
   weak: {
-    bar: "bg-gradient-to-r from-red-600 to-red-400",
+    bar: "from-red-600 to-rose-400",
     text: "text-red-600 dark:text-red-400",
-    ring: "ring-red-500/20",
+    badge:
+      "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400",
     label: "ضعیف",
-    glow: "shadow-red-500/20",
   },
 } as const;
 
-const confBadge = {
-  high: "bg-gradient-to-r from-brand-50 to-brand-100 dark:from-brand-500/10 dark:to-brand-500/20 text-brand-700 dark:text-brand-400 border-brand-200 dark:border-brand-500/30 hover:shadow-sm transition-shadow",
-  medium: "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-500/10 dark:to-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30 hover:shadow-sm transition-shadow",
-  low: "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-500/10 dark:to-red-500/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30 hover:shadow-sm transition-shadow",
-  non_calculable: "bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-500/10 dark:to-slate-500/20 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-500/30 hover:shadow-sm transition-shadow",
+const confidenceStyles = {
+  high: {
+    label: "اطمینان بالا",
+    className:
+      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400",
+  },
+  medium: {
+    label: "اطمینان متوسط",
+    className:
+      "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400",
+  },
+  low: {
+    label: "اطمینان کم",
+    className:
+      "border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400",
+  },
+  non_calculable: {
+    label: "P/E نامشخص",
+    className:
+      "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400",
+  },
 } as const;
 
-const confFa = {
-  high: "اطمینان بالا",
-  medium: "اطمینان متوسط",
-  low: "اطمینان کم",
-  non_calculable: "بدون P/E",
-} as const;
+type Confidence = keyof typeof confidenceStyles;
 
-type Confidence = keyof typeof confFa;
+function ArrowIcon({ direction }: { direction: "up" | "down" | "flat" }) {
+  if (direction === "flat") {
+    return (
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="h-4 w-4"
+      >
+        <path d="M5 12h14" />
+      </svg>
+    );
+  }
 
-export default function StockCard({ stock }: { stock: RankingItem }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="h-4 w-4"
+    >
+      {direction === "up" ? (
+        <path d="m7 14 5-5 5 5" />
+      ) : (
+        <path d="m7 10 5 5 5-5" />
+      )}
+    </svg>
+  );
+}
+
+export default function StockCard({
+  stock,
+}: {
+  stock: RankingItem;
+}) {
   const price = num(stock.currentPrice);
   const change = num(stock.priceChangePercent);
   const pe = num(stock.forwardPe);
   const eps = num(stock.estimatedAnnualEps);
-  const score = num(stock.attractivenessScore) ?? 0;
   const volume = num(stock.dailyVolume);
+  const score = num(stock.attractivenessScore) ?? 0;
+
+  const scorePercent = Math.min(100, Math.max(0, score * 100));
   const t = tier[scoreTier(score)];
 
-  const confKey = (stock.confidence in confBadge
-    ? (stock.confidence as Confidence)
-    : "non_calculable") as Confidence;
+  const confKey: Confidence =
+    typeof stock.confidence === "string" &&
+      Object.prototype.hasOwnProperty.call(
+        confidenceStyles,
+        stock.confidence
+      )
+      ? (stock.confidence as Confidence)
+      : "non_calculable";
 
-  const changeColor =
-    change === null
-      ? "text-muted"
+  const confidence = confidenceStyles[confKey];
+
+  const changeDirection =
+    change === null || change === 0
+      ? "flat"
       : change > 0
-        ? "text-emerald-600 dark:text-emerald-400"
-        : change < 0
-          ? "text-red-600 dark:text-red-400"
-          : "text-muted";
+        ? "up"
+        : "down";
 
   const peColor =
     pe === null
@@ -85,121 +145,179 @@ export default function StockCard({ stock }: { stock: RankingItem }) {
   return (
     <Link
       href={`/stocks/${encodeURIComponent(stock.symbol)}`}
-      className="group block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60"
+      aria-label={`مشاهده تحلیل نماد ${stock.symbol}، ${stock.name} `}
+      className="group block h-full rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-4 focus-visible:ring-offset-surface"
     >
       <article
-        className={`relative h-full rounded-2xl bg-surface border border-app
-                    ring-1 ring-inset ${t.ring} p-5 flex flex-col gap-4
-                    transition-all duration-300
-                    group-hover:-translate-y-1 group-hover:shadow-2xl ${t.glow}
-                    dark:group-hover:shadow-black/40 shadow-gray-200/40`}
+        dir="rtl"
+        className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-app bg-surface p-4 shadow-sm transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:border-brand-500/30 hover:shadow-lg motion-reduce:transition-none sm:p-5"
       >
-        {/* Rank pill with animated background */}
+        {/* Subtle top accent */}
         <div
-          className="absolute -top-2 -right-2 w-9 h-9 rounded-full bg-surface border border-app
-                     flex items-center justify-center text-xs font-bold tabular transition-all duration-300
-                     group-hover:scale-110 group-hover:shadow-md"
-        >
-          <span className="absolute inset-0 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full opacity-0 group-hover:opacity-10 transition-opacity duration-300"></span>
-          <span className="relative z-10">{stock.rank}</span>
-        </div>
+          aria-hidden="true"
+          className={`absolute inset - x - 0 top - 0 h - 1 bg - gradient - to - l ${t.bar} `}
+        />
 
-        {/* Header with gradient accent */}
-        <header className="flex justify-between items-start gap-3 group-hover:mb-2 transition-all">
-          <div className="min-w-0">
-            <h3 className="font-bold text-lg leading-tight truncate text-fg group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
-              {stock.symbol}
-            </h3>
-            <p className="text-xs text-muted truncate mt-1">{stock.name}</p>
-            <p className="text-[10px] text-muted/60 mt-2 inline-block px-2 py-0.5 rounded-full bg-surface-2">
-              {stock.sector}
-            </p>
-          </div>
-          <div className="relative group-hover:scale-105 transition-transform duration-300">
-            <span
-              className={`text-[10px] px-2.5 py-1.5 rounded-full border transition-all hover:shadow-sm ${confBadge[confKey]}`}
-              title={
-                confKey === "non_calculable"
-                  ? "صورت مالی فصلی در دسترس نیست؛ P/E محاسبه نشد"
-                  : undefined
-              }
+        {/* Symbol and ranking */}
+        <header className="flex items-start gap-3 pt-1">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <div
+              className={`inline-flex shrink-0 items-center rounded-full border px-2 py-1 text-[10px] font-semibold leading-4 ${confidence.className}`}
             >
-              {confFa[confKey]}
-            </span>
+              {stock.rank}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-lg font-extrabold leading-7 text-fg transition-colors group-hover:text-brand-600 dark:group-hover:text-brand-400">
+                {stock.symbol}
+              </h3>
+
+              <p className="mt-0.5 line-clamp-2 min-h-5 text-xs leading-5 text-muted">
+                {stock.name}
+              </p>
+
+              <span className="mt-2 inline-flex max-w-full items-center rounded-lg border border-app bg-surface-2 px-2 py-1 text-[11px] font-medium text-muted">
+                <span className="truncate">{stock.sector}</span>
+              </span>
+            </div>
           </div>
+
+          <span
+            title={
+              confKey === "non_calculable"
+                ? "نسبت P/E آینده‌نگر برای این نماد قابل محاسبه نیست."
+                : confidence.label
+            }
+            className={`inline-flex shrink-0 items-center rounded-full border px-2 py-1 text-[10px] font-semibold leading-4 ${confidence.className}`}
+          >
+            {confidence.label}
+          </span>
         </header>
 
-        {/* Score bar with animated progress */}
-        <div className="transition-all duration-500 group-hover:opacity-100 opacity-70">
-          <div className="flex justify-between items-baseline mb-2 group-hover:mb-2 transition-all">
-            <span className="text-[10px] text-muted flex items-center gap-1">
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
-              </svg>
-              امتیاز جذابیت
-            </span>
-            <div className="flex items-baseline gap-2 group-hover:gap-1 transition-all">
-              <span className={`text-[11px] font-semibold ${t.text}`}>
-                {t.label}
-              </span>
-              <span className={`text-2xl font-bold tabular ${t.text} transition-transform group-hover:scale-105`}>
-                {(score * 100).toFixed(0)}
-              </span>
-            </div>
-          </div>
-          <div className="relative h-2 rounded-full bg-surface-2 overflow-hidden group-hover:h-2.5 transition-all">
-            <div
-              className={`absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out ${t.bar}`}
-              style={{ width: `${Math.min(100, score * 100)}%` }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"></div>
-            </div>
-            <div className="absolute right-0 top-0 h-full w-2 bg-white/40 rounded-full animate-pulse"></div>
-          </div>
-        </div>
+        {/* Attractiveness score */}
+        <section
+          aria-label="امتیاز جذابیت"
+          className="mt-6 rounded-xl border border-app bg-surface-2/50 p-3.5"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-muted">
+                امتیاز جذابیت
+              </p>
 
-        {/* Price row with improved layout */}
-        <div className="flex justify-between items-end pt-2 group-hover:pt-3 transition-all border-t border-app border-dashed">
-          <div className="flex-1">
-            <p className="text-[10px] text-muted mb-1 flex items-center gap-1">
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-              </svg>
+              <div className="mt-1.5 flex items-baseline gap-1.5">
+                <span
+                  className={`text - 3xl font - black tabular - nums tracking - tight ${t.text} `}
+                >
+                  {Math.round(scorePercent).toLocaleString("fa-IR")}
+                </span>
+                <span className="text-xs text-muted">از ۱۰۰</span>
+              </div>
+            </div>
+
+            <span
+              className={`rounded - lg px - 3 py - 1.5 text - xs font - bold ${t.badge} `}
+            >
+              {t.label}
+            </span>
+          </div>
+
+          <div
+            className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+            role="progressbar"
+            aria-label="درصد امتیاز جذابیت"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(scorePercent)}
+          >
+            <div
+              className={`h - full rounded - full bg - gradient - to - l ${t.bar} transition - [width] duration - 500 motion - reduce: transition - none`}
+              style={{ width: `${scorePercent}% ` }}
+            />
+          </div>
+        </section>
+
+        {/* Price and daily change */}
+        <section className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-muted">
               آخرین قیمت
             </p>
-            <p className="text-2xl font-bold tabular leading-none text-fg group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+
+            <p
+              className="mt-2 truncate text-2xl font-extrabold leading-tight tracking-tight text-fg tabular-nums sm:text-3xl"
+              title={price !== null ? String(price) : undefined}
+            >
               {price !== null ? faPrice(price) : "—"}
             </p>
-            <p className="text-[9px] text-muted/60 mt-1">ریال</p>
-          </div>
-          <div className="text-right ml-4 flex-shrink-0">
-            <p className="text-[10px] text-muted mb-1 flex items-center justify-end gap-1">
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              تغییر روز
-            </p>
-            <p className={`text-lg font-bold tabular leading-none ${changeColor}`}>
-              {change !== null ? faPercent(change) : "—"}
-            </p>
-          </div>
-        </div>
 
-        {/* Metrics row with improved spacing */}
-        <div className="grid grid-cols-3 gap-2 pt-4 group-hover:gap-3 transition-all">
+            <p className="mt-1 text-[11px] text-muted">
+              ریال
+            </p>
+          </div>
+
+          <div className="text-left">
+            <p className="text-xs font-medium text-muted">
+              تغییر روزانه
+            </p>
+
+            <div
+              className={`mt - 2 inline - flex items - center gap - 1 rounded - lg px - 2 py - 1.5 text - sm font - bold tabular - nums ${change === null || change === 0
+                ? "bg-surface-2 text-muted"
+                : change > 0
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  : "bg-red-500/10 text-red-600 dark:text-red-400"
+                } `}
+            >
+              <ArrowIcon direction={changeDirection} />
+
+              <span>
+                {change !== null ? faPercent(change) : "—"}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* Financial metrics */}
+        <section
+          aria-label="شاخص‌های مالی"
+          className="mt-5 grid grid-cols-3 divide-x divide-x-reverse divide-app border-t border-app pt-4"
+        >
           <Metric
             label="P/E آینده"
             value={pe !== null ? pe.toFixed(2) : "—"}
-            accent={confKey === "non_calculable" ? "text-muted" : peColor}
+            accent={
+              confKey === "non_calculable" ? "text-muted" : peColor
+            }
           />
+
           <Metric
-            label="EPS"
+            label="EPS برآوردی"
             value={eps !== null ? faPrice(eps) : "—"}
           />
+
           <Metric
-            label="حجم"
+            label="حجم معاملات"
             value={volume !== null ? faCompact(volume) : "—"}
           />
+        </section>
+
+        {/* Details affordance */}
+        <div className="mt-4 flex items-center justify-between border-t border-app/70 pt-3 text-xs">
+          <span className="text-muted">
+            مشاهده تحلیل نماد
+          </span>
+
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            className="h-4 w-4 text-muted transition-transform duration-300 group-hover:-translate-x-1 group-hover:text-brand-600 dark:group-hover:text-brand-400"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
         </div>
       </article>
     </Link>
@@ -216,11 +334,15 @@ function Metric({
   accent?: string;
 }) {
   return (
-    <div className="group/metric">
-      <p className="text-[10px] text-muted mb-1 group-hover/metric:text-brand-600 dark:group-hover/metric:text-brand-400 transition-colors">
+    <div className="min-w-0 px-1.5 text-center first:pr-0 last:pl-0 sm:px-2">
+      <p className="truncate text-[10px] font-medium leading-5 text-muted sm:text-xs">
         {label}
       </p>
-      <p className={`text-sm font-semibold tabular ${accent} group-hover/metric:scale-105 transition-transform`}>
+
+      <p
+        className={`mt - 1 break-words text - xs font - bold leading - 5 tabular - nums sm: text - sm ${accent} `}
+        title={value}
+      >
         {value}
       </p>
     </div>

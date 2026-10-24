@@ -72,7 +72,7 @@ export function Footer() {
                 {/* Bottom bar */}
                 <div className="mt-10 pt-6 border-t border-app flex flex-col sm:flex-row items-center justify-between gap-3">
                     <p className="text-[11px] text-muted">
-                        © {year} بورس رادار — ساخته‌شده با ❤️ برای بازار سرمایه ایران
+                        © {year} بورس کاو— ساخته‌شده با ❤️ برای بازار سرمایه ایران
                     </p>
                     <div className="flex items-center gap-4 text-[11px] text-muted">
                         <a
