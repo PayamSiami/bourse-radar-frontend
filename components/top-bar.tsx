@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { useAuth } from "@/lib/auth";
+import { MenuIcon, SearchIcon, UserIcon } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/stocks", label: "سهام" },
@@ -389,25 +390,6 @@ function NavLink({
 }
 
 /* ── Icons ── */
-
-function SearchIcon({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
-  );
-}
-
 function CloseIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg
@@ -421,22 +403,6 @@ function CloseIcon({ className = "h-4 w-4" }: { className?: string }) {
       strokeLinejoin="round"
     >
       <path d="M18 6 6 18M6 6l12 12" />
-    </svg>
-  );
-}
-
-function MenuIcon({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-    >
-      <path d="M3 6h18M3 12h18M3 18h18" />
     </svg>
   );
 }
@@ -457,25 +423,6 @@ function ChevronIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-
-function UserIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21a8 8 0 0 1 16 0" />
-    </svg>
-  );
-}
-
 function TicketIcon({ className }: { className?: string }) {
   return (
     <svg

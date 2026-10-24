@@ -1,8 +1,8 @@
 import { MetadataRoute } from 'next'
  
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://https://sahamkav.ir'
- 
+  const baseUrl = 'https://sahamkav.ir'
+
   return [
     {
       url: baseUrl,
@@ -28,7 +28,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'daily',
       priority: 0.8,
     },
-    // Add specific stock pages when needed
-    // They'll be generated dynamically in production
   ]
 }

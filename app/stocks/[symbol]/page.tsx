@@ -2,6 +2,7 @@ import StockDetailView from "@/components/StockDetailView";
 import { fetchStockDetail } from "@/lib/api";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import Script from "next/script";
 
 interface StockPageProps {
     params: Promise<{ symbol: string }>;
@@ -24,31 +25,42 @@ export async function generateMetadata({ params }: StockPageProps): Promise<Meta
         return String(num).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]!);
     };
 
+    const baseUrl = "https://sahamkav.ir";
     const stockData = {
         "@context": "https://schema.org",
-        "@type": "Organization",
+        "@type": "Stock",
         "name": stock.name,
         "symbol": symbol,
         "stockExchange": {"@type": "StockExchange", "name": "Tehran Stock Exchange"},
+        "price": stock.price.last,
+        "currency": "IRR",
         "parentOrganization": {
             "@type": "FinancialService",
             "name": "Tehran Stock Exchange",
             "url": "https://www.seo.ir",
         },
-        "numberOfEmployees": {
-            "@type": "EmployeeRoles",
-            "employeeCount": 0,
-            "roleManager": null,
-            "employmentType": "notApplicable",
-            "reason": "Not available",
-        },
-        "contactPoint": {
-            "@type": "ContactPoint",
-            "contactType": "Customer Service",
-            "telephone": null,
-            "areaServed": "IR",
-            "availableLanguage": "fa",
-        },
+        "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "تحلیل بنیادی",
+            "itemListElement": [
+                {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "قیمت سهام",
+                    "url": `${baseUrl}/stocks/${symbol}`,
+                    "price": stock.price.last,
+                    "priceCurrency": "IRR"
+                },
+                {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": "P/E Forward",
+                    "url": `${baseUrl}/stocks/${symbol}`,
+                    "price": stock.forwardPe?.forwardPe,
+                    "priceCurrency": "IRR"
+                }
+            ]
+        }
     };
 
     return {
@@ -61,10 +73,10 @@ export async function generateMetadata({ params }: StockPageProps): Promise<Meta
             description:
                 `تحلیل بنیادی ${stock.name} (${symbol}). قیمت: ${faNumber(stock.price.last)} ریال. P/E: ${Number(stock.forwardPe?.forwardPe).toFixed(2)}`,
             type: "article",
-            url: `https://https://sahamkav.ir/stocks/${symbol}`,
+            url: `${baseUrl}/stocks/${symbol}`,
             images: [
                 {
-                    url: `/api/og/stocks/${symbol}`,
+                    url: `${baseUrl}/api/og/stocks/${symbol}`,
                     width: 1200,
                     height: 630,
                     alt: `${stock.name} - تحلیل بنیادی`,
@@ -76,14 +88,14 @@ export async function generateMetadata({ params }: StockPageProps): Promise<Meta
             title: `${symbol} — ${stock.name} | بورس رادار`,
             description:
                 `تحلیل ${stock.name} در بورس رادار. قیمت: ${faNumber(stock.price.last)} ریال.`,
-            images: [`/api/og/stocks/${symbol}`],
+            images: [`${baseUrl}/api/og/stocks/${symbol}`],
         },
         robots: {
             index: true,
             follow: true,
         },
         alternates: {
-            canonical: `https://https://sahamkav.ir/stocks/${symbol}`,
+            canonical: `${baseUrl}/stocks/${symbol}`,
         },
     };
 }
@@ -98,5 +110,25 @@ export default async function StockPage({ params }: StockPageProps) {
         notFound();
     }
 
-    return <StockDetailView stock={stock} />;
+    return (
+        <>
+            {/* Stock structured data */}
+            <Script
+                id="stock-schema"
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ 
+                    __html: JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@type": "Stock",
+                        "name": stock.name,
+                        "symbol": symbol,
+                        "stockExchange": {"@type": "StockExchange", "name": "Tehran Stock Exchange"},
+                        "price": stock.price.last,
+                        "currency": "IRR"
+                    }) 
+                }}
+            />
+            <StockDetailView stock={stock} />
+        </>
+    );
 }
