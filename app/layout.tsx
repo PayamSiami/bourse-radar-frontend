@@ -154,19 +154,22 @@ export default function RootLayout({
       className={`${vazirmatn.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
+      <body className="min-h-full flex flex-col font-sans bg-app text-fg">
+        {/* Structured data script - place it directly in body */}
         <Script
           id="structured-data"
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
-      </head>
-      <body className="min-h-full flex flex-col font-sans bg-app text-fg">
+
+        {/* Theme initialization script - keep beforeInteractive but no longer place it in manual head */}
         <Script
           id="theme-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
+
+        {/* Clarity script */}
         <Script
           id="ms-clarity"
           strategy="afterInteractive"
@@ -180,14 +183,13 @@ export default function RootLayout({
     `,
           }}
         />
+
         <AuthProvider>
           <TopBar />
           <main className="flex-1">{children}</main>
           <Footer />
         </AuthProvider>
-        <TopBar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        {/* Remove duplicate <TopBar /> and <main /> */}
       </body>
     </html>
   );
