@@ -71,7 +71,7 @@ export default function Home() {
     try {
       const [rankingResult, sectorResult] = await Promise.all([
         fetchRankings(50),
-        fetchSectors().catch(() => [] as SectorSummary[]),
+        fetchSectors().catch(() => ({ data: [] as SectorSummary[] }))
       ]);
 
       if (id !== requestId.current) return;
@@ -90,7 +90,7 @@ export default function Home() {
         : rankingData.items ?? rankingData.data ?? [];
 
       setItems(rankingItems);
-      setSectors(sectorResult);
+      setSectors(sectorResult.data ?? []);
       setMeta({
         generatedAt: rankingData.generatedAt,
         count: rankingData.count ?? rankingItems.length,
