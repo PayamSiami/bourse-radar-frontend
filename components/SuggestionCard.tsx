@@ -25,14 +25,37 @@ const tier = {
     },
 } as const;
 
-const confBadge = {
+// ─── Confidence maps ─────────────────────────────────────
+// Widened to Record<string, string> because `rawData.confidence`
+// comes from the DB as a free-form string (may be "non_calculable",
+// empty, or undefined). Falls back to `low` / "نامشخص" at use sites.
+
+const confBadge: Record<string, string> = {
     high: "bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 border-brand-200 dark:border-brand-500/20",
     medium:
         "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20",
     low: "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20",
+};
+
+const confFa: Record<string, string> = {
+    high: "بالا",
+    medium: "متوسط",
+    low: "کم",
+};
+
+const trendArrow = {
+    up: "↗️",
+    down: "↘️",
+    neutral: "→",
 } as const;
 
-const confFa = { high: "بالا", medium: "متوسط", low: "کم" } as const;
+const trendLabel = {
+    up: "صعودی",
+    down: "نزولی",
+    neutral: "خنثی",
+} as const;
+
+type TrendDir = keyof typeof trendArrow;
 
 export default function SuggestionCard({ item }: { item: SuggestionFull }) {
     // Fallback branch (LLM failed for this item)
@@ -42,16 +65,53 @@ export default function SuggestionCard({ item }: { item: SuggestionFull }) {
 
     // Full LLM branch
     const headline = item.headline;
+    const trendDirection: TrendDir =
+        item.trendDirection && item.trendDirection in trendArrow
+            ? (item.trendDirection as TrendDir)
+            : "neutral";
+    const trendArrowSymbol = trendArrow[trendDirection];
+    const trendLabelText = trendLabel[trendDirection];
+    const confidenceScore = item.confidenceScore || 50;
+    const nearTermOutlook = item.nearTermOutlook || "چشم‌انداز نامشخص";
+
+    // Determine confidence tier — typed as a literal key so
+    // confBadge[confidenceTier] type-checks without widening.
+    let confidenceTier: "high" | "medium" | "low" = "medium";
+    if (confidenceScore >= 70) confidenceTier = "high";
+    else if (confidenceScore <= 40) confidenceTier = "low";
 
     return (
-        <article className="rounded-2xl bg-surface border border-app ring-1 ring-inset ring-black/[0.02] dark:ring-white/[0.02] p-5 flex flex-col gap-4 hover:border-brand-200 dark:hover:border-brand-500/30 transition">
-            {/* Headline */}
-            <header>
-                <h3 className="text-base font-bold leading-snug text-fg">{headline}</h3>
+        <article className="rounded-2xl bg-surface border border-app ring-1 ring-inset ring-black/2 dark:ring-white/2 p-5 flex flex-col gap-4 hover:border-brand-200 dark:hover:border-brand-500/30 transition">
+            {/* Headline with trend indicator */}
+            <header className="flex items-start justify-between gap-3">
+                <h3 className="text-base font-bold leading-snug text-fg flex-1">{headline}</h3>
+                <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-2xl">{trendArrowSymbol}</span>
+                    <span
+                        className={`text-xs font-semibold px-2 py-1 rounded-full border ${confBadge[confidenceTier]}`}
+                    >
+                        اطمینان {confFa[confidenceTier]} ({confidenceScore}%)
+                    </span>
+                </div>
             </header>
 
             {/* Analysis */}
             <p className="text-[13px] leading-relaxed text-muted">{item.analysis}</p>
+
+            {/* Trend prediction banner */}
+            <div className="rounded-xl bg-brand-50 dark:bg-brand-500/5 border border-brand-200 dark:border-brand-500/20 p-4">
+                <div className="flex items-start gap-3">
+                    <div className="text-2xl shrink-0">{trendArrowSymbol}</div>
+                    <div className="flex-1">
+                        <p className="text-[11px] font-semibold text-brand-700 dark:text-brand-400 mb-1">
+                            روند کوتاه‌مدت: {trendLabelText}
+                        </p>
+                        <p className="text-[12px] text-muted leading-relaxed">
+                            {nearTermOutlook}
+                        </p>
+                    </div>
+                </div>
+            </div>
 
             {/* Positive / Risk factors side-by-side */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -116,6 +176,13 @@ function FallbackCard({ item }: { item: SuggestionFull }) {
     const volume = num(d.volume);
     const t = tier[scoreTier(score)];
 
+    // `d.confidence` is `unknown`/`string` from rawData. Coerce once;
+    // fall back to `low` / "نامشخص" if the DB sent "non_calculable" or null.
+    const rawConf = typeof d.confidence === "string" ? d.confidence : "";
+    const confKey = rawConf in confFa ? rawConf : "low";
+    const confLabel = confFa[confKey] ?? "نامشخص";
+    const confBadgeClass = confBadge[confKey] ?? confBadge.low;
+
     return (
         <article
             className={`rounded-2xl bg-surface border border-app ring-1 ring-inset ${t.ring} p-5 flex flex-col gap-4`}
@@ -123,18 +190,20 @@ function FallbackCard({ item }: { item: SuggestionFull }) {
             <header className="flex items-start justify-between gap-3">
                 <div>
                     <Link
-                        href={`/stocks/${encodeURIComponent(d.symbol)}`}
+                        href={`/stocks/${encodeURIComponent(String(d.symbol))}`}
                         className="text-base font-bold text-fg hover:text-brand-600 dark:hover:text-brand-400 transition"
                     >
-                        {d.symbol}
+                        {String(d.symbol)}
                     </Link>
-                    <p className="text-xs text-muted mt-0.5">{d.name}</p>
-                    <p className="text-[10px] text-muted/70 mt-1">{d.sector}</p>
+                    <p className="text-xs text-muted mt-0.5">{String(d.name ?? "")}</p>
+                    <p className="text-[10px] text-muted/70 mt-1">
+                        {String(d.sector ?? "")}
+                    </p>
                 </div>
                 <span
-                    className={`shrink-0 text-[10px] px-2 py-1 rounded-full border ${confBadge[d.confidence]}`}
+                    className={`shrink-0 text-[10px] px-2 py-1 rounded-full border ${confBadgeClass}`}
                 >
-                    اطمینان {confFa[d.confidence]}
+                    اطمینان {confLabel}
                 </span>
             </header>
 
@@ -156,11 +225,14 @@ function FallbackCard({ item }: { item: SuggestionFull }) {
                     label="حجم"
                     value={volume !== null ? faCompact(volume) : "—"}
                 />
-                <Metric label="رتبه" value={d.overallRank} />
+                <Metric
+                    label="رتبه"
+                    value={d.overallRank != null ? String(d.overallRank) : "—"}
+                />
             </div>
 
             <p className="text-[10px] text-muted/80 leading-relaxed border-t border-app pt-3">
-                {d.disclaimer}
+                {String(d.disclaimer ?? "")}
             </p>
         </article>
     );

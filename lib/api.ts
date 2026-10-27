@@ -22,6 +22,16 @@ export interface SuggestionFull {
   positiveFactors: string[];
   disclaimer: string;
   usage?: SuggestionUsage;
+  
+  // New prediction fields
+  trendDirection: "up" | "down" | "neutral";
+  trendArrow: string;
+  confidenceScore: number;
+  trendHorizon: "1d" | "1w" | "1m";
+  nearTermOutlook: string;
+  predictionBasis: string;
+  volatilityRisk: "low" | "medium" | "high";
+  
   // fallback fields (present only when LLM failed for this item)
   symbol?: string;
   fallback?: true;
