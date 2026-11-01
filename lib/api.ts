@@ -22,7 +22,17 @@ export interface SuggestionFull {
   positiveFactors: string[];
   disclaimer: string;
   usage?: SuggestionUsage;
-  
+
+  // Stock identity and metrics (from ranking data)
+  symbol: string;
+  name: string;
+  sector: string;
+  price?: number;
+  forwardPe?: number;
+  estimatedAnnualEps?: number;
+  score?: number;
+  rank?: number;
+
   // New prediction fields
   trendDirection: "up" | "down" | "neutral";
   trendArrow: string;
@@ -31,9 +41,8 @@ export interface SuggestionFull {
   nearTermOutlook: string;
   predictionBasis: string;
   volatilityRisk: "low" | "medium" | "high";
-  
+
   // fallback fields (present only when LLM failed for this item)
-  symbol?: string;
   fallback?: true;
   error?: string;
   rawData?: {

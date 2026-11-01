@@ -15,7 +15,8 @@ export default function SuggestionsPage() {
         try {
             setLoading(true);
             setError(null);
-            setData(await fetchSuggestions({ topN: 20, minConfidence: "medium" }));
+            const result = await fetchSuggestions({ topN: 20, minConfidence: "medium" });
+            setData(result);
         } catch (e: any) {
             setError(e.message);
         } finally {

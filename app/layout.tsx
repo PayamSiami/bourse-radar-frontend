@@ -215,13 +215,13 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
-        
+
         <Script
           id="structured-data-org"
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
         />
-        
+
         <Script
           id="structured-data-breadcrumb"
           type="application/ld+json"
