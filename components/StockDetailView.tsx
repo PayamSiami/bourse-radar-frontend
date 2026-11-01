@@ -14,7 +14,7 @@ import { useWatchlist } from "@/lib/watchlist";
 import { MarketCapTab } from "./stock-tabs/market-cap-chart";
 import { MonthlyChartTab } from "./stock-tabs/monthly-chart";
 import { FinancialsTab } from "./stock-tabs/financials";
-import { MoneyFlowTab } from "./stock-tabs/money-flow";
+// import { MoneyFlowTab } from "./stock-tabs/money-flow";
 import { RatiosTab } from "./stock-tabs/ratios";
 import { DividendsTab } from "./stock-tabs/dividends";
 
@@ -63,7 +63,7 @@ const TABS = [
   { id: "market_cap", label: "ارزش بازار" },
   { id: "monthly", label: "گزارش فعالیت ماهانه" },
   { id: "financials", label: "صورتهای مالی" },
-  { id: "money_flow", label: "روند قیمت" },
+  // { id: "money_flow", label: "روند قیمت" },
   { id: "dividends", label: "سودآوری" },
   { id: "ratios", label: "نسبتهای ارزشگذاری" },
   { id: "orderbook", label: "تابلو خوانی" },
@@ -489,7 +489,7 @@ export default function StockDetailView({ stock }: { stock: StockDetail }) {
             {activeTab === "market_cap" && <MarketCapTab symbol={stock.symbol} />}
             {activeTab === "monthly" && <MonthlyChartTab symbol={stock.symbol} />}
             {activeTab === "financials" && <FinancialsTab stock={stock} />}
-            {activeTab === "money_flow" && <MoneyFlowTab symbol={stock.symbol} />}
+            {/* {activeTab === "money_flow" && <MoneyFlowTab symbol={stock.symbol} />} */}
             {activeTab === "dividends" && <DividendsTab symbol={stock.symbol} />}
             {activeTab === "ratios" && <RatiosTab stock={stock} />}
             {activeTab === "orderbook" && (
